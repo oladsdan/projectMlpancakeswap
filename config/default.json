@@ -1,6 +1,6 @@
 {
   "apiPort": 3000,
-  "refreshIntervalMs": 120000,
+  "refreshIntervalMs": 300000,
   "historyRetentionLimit": 200,
 
   "dexscreenerApiSearchBaseUrl": "https://api.dexscreener.com/latest/dex/search", 
