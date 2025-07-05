@@ -205,3 +205,35 @@ export async function getAllPairAddresses() {
     }
 }
 
+export async function updateSignalHistory(pairAddress, signal) {
+    try {
+        const tokenDoc = await TokenData.findOne({ pairAddress });
+        if (tokenDoc) {
+            // Ensure the signal has a timestamp, add current if not present
+            const signalToStore = { ...signal, timestamp: signal.timestamp || Date.now() };
+            tokenDoc.signalHistory.push(signalToStore);
+
+            if (tokenDoc.signalHistory.length > HISTORY_RETENTION_LIMIT) {
+                tokenDoc.signalHistory.shift(); // Remove the oldest entry
+            }
+            tokenDoc.lastUpdated = Date.now();
+            await tokenDoc.save();
+            console.log(`Signal history updated for ${pairAddress}`);
+        } else {
+            console.warn(`Token data not found for ${pairAddress}. Signal history not updated.`);
+        }
+    } catch (error) {
+        console.error(`Error updating signal history for ${pairAddress}:`, error);
+    }
+}
+
+export async function getSignalHistory(pairAddress) {
+    try {
+        const tokenDoc = await TokenData.findOne({ pairAddress }, { signalHistory: 1 });
+        return tokenDoc ? tokenDoc.signalHistory : [];
+    } catch (error) {
+        console.error(`Error fetching signal history for ${pairAddress}:`, error);
+        return [];
+    }
+}
+
