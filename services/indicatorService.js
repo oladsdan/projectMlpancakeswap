@@ -197,7 +197,7 @@ export async function generateCombinedSignal(pairAddress, currentPrice, currentV
     // Bullish crossover: MACD line crosses above Signal line
     // Also consider if both are positive or near zero for stronger signal
     const macdCondition = macd !== null && macd.MACD > macd.signal;
-    signalDetails.push(`MACD (${macd !== null ? macd.MACD.toFixed(4) : 'N/A'} vs Signal ${macd !== null ? macd.signal.toFixed(4) : 'N/A'}): ${macdCondition ? '✅ Bullish Crossover' : '❌ No Bullish Crossover'}`);
+    signalDetails.push(`MACD (${macd !== null ? Number(macd.MACD).toFixed(4) : 'N/A'} vs Signal ${macd !== null ? macd.signal.toFixed(4) : 'N/A'}): ${macdCondition ? '✅ Bullish Crossover' : '❌ No Bullish Crossover'}`);
 
 
     // 3. Price Trend (Short-term rapid increase check)
