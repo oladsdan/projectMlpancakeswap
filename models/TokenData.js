@@ -56,7 +56,9 @@ const tokenDataSchema = new mongoose.Schema({
 tokenDataSchema.index({ pairAddress: 1 });
 tokenDataSchema.index({ targetTokenAddress: 1 });
 tokenDataSchema.index({ lastUpdated: 1 }); // Useful for sorting/pruning
+
 tokenDataSchema.index({ 'signalHistory.timestamp': -1 }); // Index for sorting signals by time
+
 
 
 const TokenData = mongoose.model('TokenData', tokenDataSchema);

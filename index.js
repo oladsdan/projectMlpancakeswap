@@ -101,9 +101,9 @@ async function signalGenerationLoop() {
                 baseToken: { address: baseToken.address, symbol: baseToken.symbol },
                 quoteToken,
                 pairName,
-                targetTokenAddress,
-                targetTokenSymbol,
-                targetTokenName
+                targetTokenAddress: tokenConfig.address,
+                targetTokenSymbol: tokenConfig.symbol,
+                targetTokenName: tokenConfig.name,
             });
 
             // --- IMPORTANT CHANGE HERE ---
