@@ -85,12 +85,273 @@ function safeParseFloat(value) {
 }
 
 
+// export async function getMarketData(tokenConfig) {
+//     const { address: targetTokenAddress, symbol: targetTokenSymbol, name: targetTokenName } = tokenConfig;
+//     const lowerCaseTokenAddress = targetTokenAddress.toLowerCase();
+
+//     let marketData = null;
+//     let historicalPrices = [];
+
+//     // --- 1. Try to fetch from PancakeSwap V3 Subgraph ---
+//     console.log(`Attempting to fetch market data for ${targetTokenSymbol} from PancakeSwap V3 Subgraph...`);
+//     try {
+//         if (!THEGRAPH_API_KEY) {
+//             console.warn("THEGRAPH_API_KEY is not set. Skipping Subgraph query.");
+//             throw new Error("THEGRAPH_API_KEY not configured.");
+//         }
+
+//         const variables = {
+//             tokenId: lowerCaseTokenAddress,
+//             quoteToken0: config.quoteTokenMap.WBNB.toLowerCase(), // Pass quote token addresses as variables
+//             quoteToken1: config.quoteTokenMap.BUSD.toLowerCase()
+//         };
+//         console.log("this is variables", variables);
+
+//         const subgraphResponse = await request(
+//             PANCAKESWAP_V3_SUBGRAPH_URL,
+//             GET_TOKEN_AND_POOL_DATA_V3, // Use the new combined query
+//             variables,
+//             SUBGRAPH_HEADERS
+//         );
+
+//         // console.log(`Subgraph response for ${targetTokenSymbol}:`, subgraphResponse);
+
+//         const token = subgraphResponse.token;
+//         const pools = subgraphResponse.pools; // Get the pools data
+
+//         // console.log("token", token);
+//         // console.log("this is pools", pools);
+//         //check pools 
+//         let tokenPriceUsd;
+
+//         for (let i = 0; i < pools.length; i++) {
+//             // console.log(Number(pools[i].token1Price.length)).toFixed(2)
+//             const formattedPrice = Number(pools[i].token1Price).toFixed(6);
+           
+//             if (pools[i].token1.symbol === 'BUSD' && formattedPrice < 10000 ) {
+//                 tokenPriceUsd = Number(pools[i].token1Price).toFixed(6);
+//                 // console.log(tokenPriceUsd)
+//                 break;
+//             } 
+//         }
+
+//         // console.log("tokenPriceUsd", tokenPriceUsd);
+
+//         if (token) {
+//             console.log(`Token data found for ${targetTokenSymbol} on V3 Subgraph.`);
+
+//             // let currentPrice = tokenPriceUsd;
+//             let currentPriceToken = Number(token.derivedUSD).toFixed(6) < 100000 ? Number(token.derivedUSD).toFixed(6) : Number(tokenPriceUsd);
+
+//             if(currentPriceToken === null) {
+//                 const queryString = `${targetTokenSymbol}/${quoteSymbol}`;
+//                 //the fetch from dexscreener
+//                 const dexscreenerApiUrl = `${DEXSCREENER_API_SEARCH_BASE_URL}?q=${queryString}`;
+
+//                 const response = await axios.get(dexscreenerApiUrl);
+
+
+//                  if (!response.data || !response.data.pairs || response.data.pairs.length === 0) {
+//                 console.warn(`No pairs found for ${targetTokenSymbol} on Dexscreener.`);
+//                 return null;
+//                 }
+        
+
+//                 const preferredQuoteTokens = Object.values(config.quoteTokenMap).map(address =>address.toLowerCase());
+//                 const relevantPairs = response.data.pairs.filter(p =>
+//                     p.chainId === config.chainId &&
+//                     (preferredQuoteTokens.includes(p.baseToken.address.toLowerCase()) ||
+//                     preferredQuoteTokens.includes(p.quoteToken.address.toLowerCase()))
+//                 );
+
+//                 let pair = null;
+//                 if (relevantPairs.length > 0) {
+//                     pair = relevantPairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
+//                 } else {
+//                     console.warn(`No preferred quote token pairs found for ${targetTokenSymbol} on Dexscreener. Taking most liquid pair.`);
+//                     pair = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
+//                 }
+
+//                 // console.log(`Dexscreener pair for ${targetTokenSymbol}:`, pair);
+//                 if (!pair) {
+//                     console.warn(`No suitable pair found for ${targetTokenSymbol} on Dexscreener even after sorting.`);
+//                     return null;
+//                 }
+//                 currentPriceToken = pair.priceUsd ? Number(parseFloat(pair.priceUsd)).toFixed(2) : 'N/A';
+
+//             }
+
+//             const currentPrice_Token = safeParseFloat(currentPriceToken);
+
+//             let currentVolume = Number(parseFloat(token.volumeUSD)).toFixed(2);
+//             let currentLiquidity = Number(parseFloat(token.totalValueLockedUSD)).toFixed(2);
+//             let pairAddressUsed = lowerCaseTokenAddress; // Default to token address if no specific pool found
+
+//             // Find the most liquid relevant pool to get precise current data
+//             let mainPool = null;
+//             if (pools && pools.length > 0) {
+//                 // Filter pools to only those involving our target token and a preferred quote token (WBNB/BUSD)
+//                 const relevantPools = pools.filter(p =>
+//                     (p.token0.id === lowerCaseTokenAddress && QUOTE_TOKEN_ADDRESSES.includes(p.token1.id)) ||
+//                     (p.token1.id === lowerCaseTokenAddress && QUOTE_TOKEN_ADDRESSES.includes(p.token0.id))
+//                 );
+
+//                 if (relevantPools.length > 0) {
+//                     mainPool = relevantPools.sort((a, b) => parseFloat(b.totalValueLockedUSD) - parseFloat(a.totalValueLockedUSD))[0];
+//                 } else {
+//                     // If no preferred quote token pool, just take the most liquid one from the fetched set
+//                     mainPool = pools.sort((a, b) => parseFloat(b.totalValueLockedUSD) - parseFloat(a.totalValueLockedUSD))[0];
+//                 }
+
+//                 if (mainPool) {
+//                     console.log(`Using data from most liquid pool for ${targetTokenSymbol}: ${mainPool.id}`);
+//                     currentLiquidity = Number(parseFloat(mainPool.totalValueLockedUSD).toFixed(2));
+//                     currentVolume = Number(parseFloat(mainPool.volumeUSD).toFixed(2));
+//                     pairAddressUsed = mainPool.id; // Use the pool ID as the primary pair address
+
+//                     if (mainPool.token0.id === lowerCaseTokenAddress) {
+//                         currentPrice = parseFloat(mainPool.token0Price).toFixed(config.priceDecimals);
+//                     } else if (mainPool.token1.id === lowerCaseTokenAddress) {
+//                         currentPrice = parseFloat(mainPool.token1Price).toFixed(config.priceDecimals);
+//                     }
+//                 }
+//             }
+
+
+//             // Collect historical daily prices from tokenDayData
+//             if (token.tokenDayData && token.tokenDayData.length > 0) {
+//                 historicalPrices = token.tokenDayData
+//                     .map(d => ({ date: d.date, price: parseFloat(d.priceUSD) }))
+//                     .sort((a, b) => a.date - b.date); // Sort by date ascending for indicator calculations
+//             }
+
+//             // Check if we have enough historical data for indicators
+//             if (historicalPrices.length < config.minHistoricalDataPoints) {
+//                 console.warn(`Insufficient historical data from Subgraph for ${targetTokenSymbol} (${historicalPrices.length} days, needed ${config.minHistoricalDataPoints}). Falling back to Dexscreener for everything.`);
+//                 throw new Error("Insufficient historical data from Subgraph."); // Force fallback
+//             }
+
+//             marketData = {
+//                 pairAddress: pairAddressUsed,
+//                 chainId: config.targetChainId,
+//                 pairName: `${targetTokenSymbol}/${config.baseCurrencySymbol}`,
+//                 baseToken: { address: targetTokenAddress, symbol: targetTokenSymbol },
+//                 quoteToken: { address: config.quoteTokenMap.WBNB, symbol: "WBNB" }, // Default to WBNB for consistency
+//                 currentPrice: currentPrice_Token,
+//                 currentVolume: currentVolume,
+//                 currentLiquidity: currentLiquidity,
+//                 historicalPrices: historicalPrices,
+//             };
+
+//             // console.log("the marketData", marketData)
+
+//             return marketData; // Return if subgraph data is sufficient
+//         } else {
+//               console.warn(`No token data found for ${targetTokenSymbol} on V3 Subgraph. Falling back to Dexscreener.`);
+
+            
+
+
+//         }
+//     } catch (subgraphError) {
+//         console.error(`Subgraph query failed for ${targetTokenSymbol}:`, subgraphError.message);
+//         if (subgraphError.response?.errors) {
+//             console.error("Subgraph GraphQL Errors:", subgraphError.response.errors);
+//         }
+//         if (subgraphError.message.includes("401") || subgraphError.message.includes("403") || subgraphError.message.includes("Unauthorized")) {
+//              throw { isAuthError: true, message: "Subgraph API Key Unauthorized" };
+//         }
+//         if (subgraphError.message.includes("429") || subgraphError.message.includes("rate limit")) {
+//             throw { isRateLimit: true, message: "Subgraph rate limit hit" }; // Propagate rate limit
+//         }
+//         // Fallback to Dexscreener if subgraph fails for other reasons or specific errors like "Insufficient historical data"
+//     }
+
+
+//     // --- 2. Fallback to Dexscreener if Subgraph fails or has insufficient data ---
+//     console.log(`Attempting to fetch market data for ${targetTokenSymbol} from Dexscreener...`);
+//     try {
+//         const queryString = `${targetTokenSymbol}/${quoteSymbol}`;
+//         const dexscreenerApiUrl = `${DEXSCREENER_API_SEARCH_BASE_URL}?q=${queryString}`;
+//         const response = await axios.get(dexscreenerApiUrl, { timeout: config.dexscreenerTimeoutMs });
+
+//         // console.log(`Dexscreener response for ${targetTokenSymbol}:`, response.data);
+
+
+
+//         if (!response.data || !response.data.pairs || response.data.pairs.length === 0) {
+//             console.warn(`No pairs found for ${targetTokenSymbol} on Dexscreener.`);
+//             return null;
+//         }
+        
+
+//         const preferredQuoteTokens = Object.values(config.quoteTokenMap).map(address =>address.toLowerCase());
+//         const relevantPairs = response.data.pairs.filter(p =>
+//             p.chainId === config.chainId &&
+//             (preferredQuoteTokens.includes(p.baseToken.address.toLowerCase()) ||
+//              preferredQuoteTokens.includes(p.quoteToken.address.toLowerCase()))
+//         );
+
+//         let pair = null;
+//         if (relevantPairs.length > 0) {
+//             pair = relevantPairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
+//         } else {
+//             console.warn(`No preferred quote token pairs found for ${targetTokenSymbol} on Dexscreener. Taking most liquid pair.`);
+//             pair = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
+//         }
+
+//         // console.log(`Dexscreener pair for ${targetTokenSymbol}:`, pair);
+//         if (!pair) {
+//             console.warn(`No suitable pair found for ${targetTokenSymbol} on Dexscreener even after sorting.`);
+//             return null;
+//         }
+
+
+//         let currentPrice = pair.priceUsd ? Number(parseFloat(pair.priceUsd)).toFixed(2) : 'N/A';
+//         // console.log("the currentprice", currentPrice);
+//         const currentVolume = pair.volume && pair.volume.h24 ? Number(parseFloat(pair.volume.h24)).toFixed(2) : 'N/A';
+
+//         const currentLiquidity = pair.liquidity && pair.liquidity.usd ? Number(parseFloat(pair.liquidity.usd)).toFixed(2) : 'N/A';
+
+//         // Dexscreener does not provide historical daily data directly.
+//         historicalPrices = []; // Will be empty
+
+//         marketData = {
+//             pairAddress: pair.pairAddress,
+//             chainId: pair.chainId,
+//             pairName: pair?.baseToken?.symbol + '/' + pair?.quoteToken?.symbol,
+//             baseToken: { address: pair.baseToken.address, symbol: pair.baseToken.symbol },
+//             quoteToken: { address: pair.quoteToken.address, symbol: pair.quoteToken.symbol },
+//             currentPrice,
+//             currentVolume,
+//             currentLiquidity,
+//             historicalPrices // Will be empty if from Dexscreener only
+//         };
+        
+
+//         return marketData;
+
+//     } catch (error) {
+//         console.error(`Dexscreener fetch failed for ${targetTokenSymbol}:`, error.message);
+//         if (error.response?.status === 429) {
+//             throw { isRateLimit: true, message: "Dexscreener rate limit hit" };
+//         }
+//         return null;
+//     }
+// }
+
 export async function getMarketData(tokenConfig) {
     const { address: targetTokenAddress, symbol: targetTokenSymbol, name: targetTokenName } = tokenConfig;
     const lowerCaseTokenAddress = targetTokenAddress.toLowerCase();
 
     let marketData = null;
     let historicalPrices = [];
+
+    // Initialize variables that will hold the final values for marketData
+    let currentPriceFinal = null;
+    let currentVolumeFinal = null;
+    let currentLiquidityFinal = null;
+    let pairAddressUsed = lowerCaseTokenAddress; // Default to token address
 
     // --- 1. Try to fetch from PancakeSwap V3 Subgraph ---
     console.log(`Attempting to fetch market data for ${targetTokenSymbol} from PancakeSwap V3 Subgraph...`);
@@ -114,83 +375,63 @@ export async function getMarketData(tokenConfig) {
             SUBGRAPH_HEADERS
         );
 
-        console.log(`Subgraph response for ${targetTokenSymbol}:`, subgraphResponse);
-
         const token = subgraphResponse.token;
-        const pools = subgraphResponse.pools; // Get the pools data
-
-        // console.log("token", token);
-        // console.log("this is pools", pools);
-        //check pools 
-        let tokenPriceUsd;
-
-        for (let i = 0; i < pools.length; i++) {
-            // console.log(Number(pools[i].token1Price.length)).toFixed(2)
-            const formattedPrice = Number(pools[i].token1Price).toFixed(6);
-           
-            if (pools[i].token1.symbol === 'BUSD' && formattedPrice < 10000 ) {
-                tokenPriceUsd = Number(pools[i].token1Price).toFixed(6);
-                // console.log(tokenPriceUsd)
-                break;
-            } 
-        }
-
-        // console.log("tokenPriceUsd", tokenPriceUsd);
+        const pools = subgraphResponse.pools;
 
         if (token) {
             console.log(`Token data found for ${targetTokenSymbol} on V3 Subgraph.`);
 
-            // let currentPrice = tokenPriceUsd;
-            let currentPriceToken = Number(token.derivedUSD).toFixed(6) < 100000 ? Number(token.derivedUSD).toFixed(6) : Number(tokenPriceUsd);
-
-            if(currentPriceToken === null) {
-                const queryString = `${targetTokenSymbol}/${quoteSymbol}`;
-                //the fetch from dexscreener
-                const dexscreenerApiUrl = `${DEXSCREENER_API_SEARCH_BASE_URL}?q=${queryString}`;
-
-                const response = await axios.get(dexscreenerApiUrl);
-
-
-                 if (!response.data || !response.data.pairs || response.data.pairs.length === 0) {
-                console.warn(`No pairs found for ${targetTokenSymbol} on Dexscreener.`);
-                return null;
+            // Step 1: Get initial price from token.derivedUSD or BUSD pool if suitable
+            let tokenPriceUsdFromBUSD = null;
+            for (let i = 0; i < pools.length; i++) {
+                const pool = pools[i];
+                const formattedPrice = Number(pool.token1Price).toFixed(6);
+                if (pool.token1.symbol === 'BUSD' && parseFloat(formattedPrice) < 10000) {
+                    tokenPriceUsdFromBUSD = Number(pool.token1Price).toFixed(6);
+                    break;
                 }
-        
-
-                const preferredQuoteTokens = Object.values(config.quoteTokenMap).map(address =>address.toLowerCase());
-                const relevantPairs = response.data.pairs.filter(p =>
-                    p.chainId === config.chainId &&
-                    (preferredQuoteTokens.includes(p.baseToken.address.toLowerCase()) ||
-                    preferredQuoteTokens.includes(p.quoteToken.address.toLowerCase()))
-                );
-
-                let pair = null;
-                if (relevantPairs.length > 0) {
-                    pair = relevantPairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
-                } else {
-                    console.warn(`No preferred quote token pairs found for ${targetTokenSymbol} on Dexscreener. Taking most liquid pair.`);
-                    pair = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
-                }
-
-                // console.log(`Dexscreener pair for ${targetTokenSymbol}:`, pair);
-                if (!pair) {
-                    console.warn(`No suitable pair found for ${targetTokenSymbol} on Dexscreener even after sorting.`);
-                    return null;
-                }
-                currentPriceToken = pair.priceUsd ? Number(parseFloat(pair.priceUsd)).toFixed(2) : 'N/A';
-
             }
 
-            const currentPrice_Token = safeParseFloat(currentPriceToken);
+            // Prefer token.derivedUSD if it's within a reasonable range, otherwise use BUSD pool price
+            if (token.derivedUSD && Number(token.derivedUSD).toFixed(6) < 100000) {
+                currentPriceFinal = safeParseFloat(Number(token.derivedUSD).toFixed(6));
+            } else if (tokenPriceUsdFromBUSD !== null) {
+                currentPriceFinal = safeParseFloat(tokenPriceUsdFromBUSD);
+            }
 
-            let currentVolume = Number(parseFloat(token.volumeUSD)).toFixed(2);
-            let currentLiquidity = Number(parseFloat(token.totalValueLockedUSD)).toFixed(2);
-            let pairAddressUsed = lowerCaseTokenAddress; // Default to token address if no specific pool found
+            // Step 2: Fallback to Dexscreener for currentPrice if Subgraph price is not good
+            if (currentPriceFinal === null || isNaN(currentPriceFinal)) {
+                console.warn(`Subgraph price for ${targetTokenSymbol} is not valid. Attempting Dexscreener fallback for currentPrice.`);
+                const queryString = `${targetTokenSymbol}/${quoteSymbol}`;
+                const dexscreenerApiUrl = `${DEXSCREENER_API_SEARCH_BASE_URL}?q=${queryString}`;
+                const response = await axios.get(dexscreenerApiUrl);
 
-            // Find the most liquid relevant pool to get precise current data
+                if (response.data && response.data.pairs && response.data.pairs.length > 0) {
+                    const preferredQuoteTokens = Object.values(config.quoteTokenMap).map(address => address.toLowerCase());
+                    const relevantPairs = response.data.pairs.filter(p =>
+                        p.chainId === config.chainId &&
+                        (preferredQuoteTokens.includes(p.baseToken.address.toLowerCase()) ||
+                         preferredQuoteTokens.includes(p.quoteToken.address.toLowerCase()))
+                    );
+                    let pair = null;
+                    if (relevantPairs.length > 0) {
+                        pair = relevantPairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
+                    } else {
+                        pair = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
+                    }
+                    if (pair && pair.priceUsd) {
+                        currentPriceFinal = safeParseFloat(parseFloat(pair.priceUsd).toFixed(config.priceDecimals));
+                    }
+                }
+            }
+
+            // Initialize volume and liquidity from token aggregate data
+            currentVolumeFinal = safeParseFloat(Number(parseFloat(token.volumeUSD)).toFixed(2));
+            currentLiquidityFinal = safeParseFloat(Number(parseFloat(token.totalValueLockedUSD)).toFixed(2));
+
+            // Step 3: Find the most liquid relevant pool to potentially refine current data and get poolAddress
             let mainPool = null;
             if (pools && pools.length > 0) {
-                // Filter pools to only those involving our target token and a preferred quote token (WBNB/BUSD)
                 const relevantPools = pools.filter(p =>
                     (p.token0.id === lowerCaseTokenAddress && QUOTE_TOKEN_ADDRESSES.includes(p.token1.id)) ||
                     (p.token1.id === lowerCaseTokenAddress && QUOTE_TOKEN_ADDRESSES.includes(p.token0.id))
@@ -199,20 +440,24 @@ export async function getMarketData(tokenConfig) {
                 if (relevantPools.length > 0) {
                     mainPool = relevantPools.sort((a, b) => parseFloat(b.totalValueLockedUSD) - parseFloat(a.totalValueLockedUSD))[0];
                 } else {
-                    // If no preferred quote token pool, just take the most liquid one from the fetched set
                     mainPool = pools.sort((a, b) => parseFloat(b.totalValueLockedUSD) - parseFloat(a.totalValueLockedUSD))[0];
                 }
 
                 if (mainPool) {
                     console.log(`Using data from most liquid pool for ${targetTokenSymbol}: ${mainPool.id}`);
-                    currentLiquidity = Number(parseFloat(mainPool.totalValueLockedUSD).toFixed(2));
-                    currentVolume = Number(parseFloat(mainPool.volumeUSD).toFixed(2));
-                    pairAddressUsed = mainPool.id; // Use the pool ID as the primary pair address
+                    currentLiquidityFinal = safeParseFloat(parseFloat(mainPool.totalValueLockedUSD).toFixed(2));
+                    currentVolumeFinal = safeParseFloat(parseFloat(mainPool.volumeUSD).toFixed(2));
+                    pairAddressUsed = mainPool.id;
 
+                    // Override currentPriceFinal with precise pool price if available and valid
+                    let poolSpecificPrice = null;
                     if (mainPool.token0.id === lowerCaseTokenAddress) {
-                        currentPrice = parseFloat(mainPool.token0Price).toFixed(config.priceDecimals);
+                        poolSpecificPrice = safeParseFloat(parseFloat(mainPool.token0Price).toFixed(config.priceDecimals));
                     } else if (mainPool.token1.id === lowerCaseTokenAddress) {
-                        currentPrice = parseFloat(mainPool.token1Price).toFixed(config.priceDecimals);
+                        poolSpecificPrice = safeParseFloat(parseFloat(mainPool.token1Price).toFixed(config.priceDecimals));
+                    }
+                    if (poolSpecificPrice !== null && !isNaN(poolSpecificPrice)) {
+                        currentPriceFinal = poolSpecificPrice;
                     }
                 }
             }
@@ -237,21 +482,15 @@ export async function getMarketData(tokenConfig) {
                 pairName: `${targetTokenSymbol}/${config.baseCurrencySymbol}`,
                 baseToken: { address: targetTokenAddress, symbol: targetTokenSymbol },
                 quoteToken: { address: config.quoteTokenMap.WBNB, symbol: "WBNB" }, // Default to WBNB for consistency
-                currentPrice: currentPrice_Token,
-                currentVolume: currentVolume,
-                currentLiquidity: currentLiquidity,
+                currentPrice: currentPriceFinal, // Use the unified final price
+                currentVolume: currentVolumeFinal,
+                currentLiquidity: currentLiquidityFinal,
                 historicalPrices: historicalPrices,
             };
-
-            // console.log("the marketData", marketData)
 
             return marketData; // Return if subgraph data is sufficient
         } else {
               console.warn(`No token data found for ${targetTokenSymbol} on V3 Subgraph. Falling back to Dexscreener.`);
-
-            
-
-
         }
     } catch (subgraphError) {
         console.error(`Subgraph query failed for ${targetTokenSymbol}:`, subgraphError.message);
@@ -262,7 +501,7 @@ export async function getMarketData(tokenConfig) {
              throw { isAuthError: true, message: "Subgraph API Key Unauthorized" };
         }
         if (subgraphError.message.includes("429") || subgraphError.message.includes("rate limit")) {
-            throw { isRateLimit: true, message: "Subgraph rate limit hit" }; // Propagate rate limit
+            throw { isRateLimit: true, message: "Subgraph rate limit hit" };
         }
         // Fallback to Dexscreener if subgraph fails for other reasons or specific errors like "Insufficient historical data"
     }
@@ -275,15 +514,10 @@ export async function getMarketData(tokenConfig) {
         const dexscreenerApiUrl = `${DEXSCREENER_API_SEARCH_BASE_URL}?q=${queryString}`;
         const response = await axios.get(dexscreenerApiUrl, { timeout: config.dexscreenerTimeoutMs });
 
-        // console.log(`Dexscreener response for ${targetTokenSymbol}:`, response.data);
-
-
-
         if (!response.data || !response.data.pairs || response.data.pairs.length === 0) {
             console.warn(`No pairs found for ${targetTokenSymbol} on Dexscreener.`);
             return null;
         }
-        
 
         const preferredQuoteTokens = Object.values(config.quoteTokenMap).map(address =>address.toLowerCase());
         const relevantPairs = response.data.pairs.filter(p =>
@@ -300,21 +534,16 @@ export async function getMarketData(tokenConfig) {
             pair = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
         }
 
-        // console.log(`Dexscreener pair for ${targetTokenSymbol}:`, pair);
         if (!pair) {
             console.warn(`No suitable pair found for ${targetTokenSymbol} on Dexscreener even after sorting.`);
             return null;
         }
 
+        currentPriceFinal = pair.priceUsd ? safeParseFloat(parseFloat(pair.priceUsd).toFixed(2)) : null; // Use currentPriceFinal
+        currentVolumeFinal = pair.volume && pair.volume.h24 ? safeParseFloat(parseFloat(pair.volume.h24).toFixed(2)) : null;
+        currentLiquidityFinal = pair.liquidity && pair.liquidity.usd ? safeParseFloat(parseFloat(pair.liquidity.usd).toFixed(2)) : null;
 
-        let currentPrice = pair.priceUsd ? Number(parseFloat(pair.priceUsd)).toFixed(2) : 'N/A';
-        // console.log("the currentprice", currentPrice);
-        const currentVolume = pair.volume && pair.volume.h24 ? Number(parseFloat(pair.volume.h24)).toFixed(2) : 'N/A';
-
-        const currentLiquidity = pair.liquidity && pair.liquidity.usd ? Number(parseFloat(pair.liquidity.usd)).toFixed(2) : 'N/A';
-
-        // Dexscreener does not provide historical daily data directly.
-        historicalPrices = []; // Will be empty
+        historicalPrices = []; // Will be empty if from Dexscreener only
 
         marketData = {
             pairAddress: pair.pairAddress,
@@ -322,12 +551,11 @@ export async function getMarketData(tokenConfig) {
             pairName: pair?.baseToken?.symbol + '/' + pair?.quoteToken?.symbol,
             baseToken: { address: pair.baseToken.address, symbol: pair.baseToken.symbol },
             quoteToken: { address: pair.quoteToken.address, symbol: pair.quoteToken.symbol },
-            currentPrice,
-            currentVolume,
-            currentLiquidity,
+            currentPrice: currentPriceFinal, // Use currentPriceFinal
+            currentVolume: currentVolumeFinal,
+            currentLiquidity: currentLiquidityFinal,
             historicalPrices // Will be empty if from Dexscreener only
         };
-        
 
         return marketData;
 
@@ -339,4 +567,3 @@ export async function getMarketData(tokenConfig) {
         return null;
     }
 }
-
