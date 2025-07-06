@@ -6,6 +6,8 @@
   "dexscreenerApiSearchBaseUrl": "https://api.dexscreener.com/latest/dex/search", 
 
   "targetChainId": "bsc",
+  "targetChainIds": "0x38",
+  
   "baseCurrencySymbol": "BUSD",
   "baseCurrencyAddress": "0xe9e7cea3dedca5984780bafc599bd69add087d56",
   "preferredQuoteTokenSymbols": ["WBNB"],
@@ -28,11 +30,23 @@
 
 
   "monitoredTokens": [
+     {
+      "symbol": "FLOKI",
+      "name": "FLOKI",
+      "address": "0xfb5B838b6cfEEdC2873aB27866079AC55363D37E",
+      "decimals": 18
+    },
 
     {
       "symbol": "CAKE",
       "name": "PancakeSwap",
       "address": "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
+      "decimals": 18
+    },
+    {
+      "symbol": "ARPA",
+      "name": "ARPA",
+      "address": "0x6F769E65c14Ebd1f68817F5f1DcDb61Cfa2D6f7e",
       "decimals": 18
     },
     {
@@ -101,12 +115,7 @@
       "address": "0x44Ec807ce2F4a6F2737A92e985f318d035883e47",
       "decimals": 18
     },
-    {
-      "symbol": "FLOKI",
-      "name": "FLOKI",
-      "address": "0xfb5B838b6cfEEdC2873aB27866079AC55363D37E",
-      "decimals": 18
-    },
+   
     {
       "symbol": "INJ",
       "name": "INJ",

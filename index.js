@@ -108,15 +108,20 @@ async function signalGenerationLoop() {
 
             // --- IMPORTANT CHANGE HERE ---
             // Only update market data if price, volume, and liquidity are valid numbers
-            if (currentPrice !== null && currentVolume !== null && currentLiquidity !== null) {
-                 await dataService.updateMarketData(pairAddress, currentPrice, currentVolume, currentLiquidity);
-            } else {
-                console.warn(`Missing or invalid price/volume/liquidity data for ${tokenConfig.symbol}. Skipping market data update.`);
-                signalResult.signal = "Error";
-                signalResult.signalDetails.push(`Missing or invalid current market data.`);
-                allSignals.push(signalResult);
-                continue; // Skip further processing for this token if core data is missing
-            }
+            // if (currentPrice !== null && currentVolume !== null && currentLiquidity !== null) {
+            //      await dataService.updateMarketData(pairAddress, currentPrice, currentVolume, currentLiquidity);
+            // } else {
+            //     console.warn(`Missing or invalid price/volume/liquidity data for ${tokenConfig.symbol}. Skipping market data update.`);
+            //     signalResult.signal = "Error";
+            //     signalResult.signalDetails.push(`Missing or invalid current market data.`);
+            //     allSignals.push(signalResult);
+            //     continue; // Skip further processing for this token if core data is missing
+            // }
+
+            
+            // 3. Store current market data historically in MongoDB
+            await dataService.updateMarketData(pairAddress, currentPrice, currentVolume, currentLiquidity);
+
 
 
             // Generate combined signal based on current and historical data from DB
@@ -156,7 +161,14 @@ async function signalGenerationLoop() {
 
 // API Endpoint
 app.get('/api/signals', (req, res) => {
-    res.json(currentSignals);
+    // res.json(currentSignals);
+    if (currentSignals.length === 0) {
+        // If no signals but loop is running, implies initial generation is in progress
+        res.status(202).json({ message: "Signals are being generated. Please wait.", status: "generating" });
+    }
+    else {
+        res.json(currentSignals);
+    }
 });
 
 // Start the signal generator and API server

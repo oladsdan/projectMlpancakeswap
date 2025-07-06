@@ -101,7 +101,7 @@ function isVolumeIncreasing(volumeHistory, currentVolume) {
         : `Current volume (${currentVolumes.toFixed(2)}) is not significantly higher than average (${averageVolume.toFixed(2)}) over ${lookbackMinutes} min.`;
 
 
-     console.log(result);
+    //  console.log(result);
 
     return { result, current: currentVolume, average: averageVolume, reason };
 }
@@ -196,9 +196,9 @@ export async function generateCombinedSignal(pairAddress, currentPrice, currentV
     const macd = calculateMACD(priceHistory);
     // Bullish crossover: MACD line crosses above Signal line
     // Also consider if both are positive or near zero for stronger signal
+    // console.log(macd)
     const macdCondition = macd !== null && macd.MACD > macd.signal;
-    signalDetails.push(`MACD (${macd !== null ? Number(macd.MACD).toFixed(4) : 'N/A'} vs Signal ${macd !== null ? macd.signal.toFixed(4) : 'N/A'}): ${macdCondition ? '✅ Bullish Crossover' : '❌ No Bullish Crossover'}`);
-
+   signalDetails.push(`MACD (${macd?.MACD != null ? macd.MACD.toFixed(4) : 'N/A'} vs Signal ${macd?.signal != null ? macd.signal.toFixed(4) : 'N/A'}): ${macdCondition ? '✅ Bullish Crossover' : '❌ No Bullish Crossover'}`);
 
     // 3. Price Trend (Short-term rapid increase check)
     const priceTrend = isPriceRisingRapidly(priceHistory, currentPrice);
@@ -234,13 +234,15 @@ export async function generateCombinedSignal(pairAddress, currentPrice, currentV
     return {
         signal,
         pairName,
-        currentPrice: parseFloat(currentPrice).toFixed(config.priceDecimals), // Format for display
+        // currentPrice: parseFloat(currentPrice).toFixed(config.priceDecimals), // Format for display
+        currentPrice: currentPrice, // Format for display
         currentVolume: parseFloat(currentVolume).toFixed(2),
         currentLiquidity: parseFloat(currentLiquidity).toFixed(2),
         rsi: rsi !== null ? rsi.toFixed(2) : 'N/A',
-        macd: macd !== null ? macd.MACD.toFixed(4) : 'N/A',
-        macdSignal: macd !== null ? macd.signal.toFixed(4) : 'N/A',
-        macdHistogram: macd !== null ? macd.histogram.toFixed(4) : 'N/A',
+        // macd: macd !== null ? macd.MACD.toFixed(4) : 'N/A',
+        macd: macd?.MACD != null ? macd.MACD.toFixed(4) : 'N/A',
+        macdSignal: macd?.MACD != null ? macd.signal.toFixed(4) : 'N/A',
+        macdHistogram: macd?.MACD != null ? macd.histogram.toFixed(4) : 'N/A',
         priceChangeShort: (priceTrend.change * 100).toFixed(2),
         volumeIncrease: (volumeTrend.current / volumeTrend.average - 1) * 100 >= 0 ? ((volumeTrend.current / volumeTrend.average - 1) * 100).toFixed(2) : 'N/A',
         liquidity: Number(currentLiquidity).toFixed(2),
