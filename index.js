@@ -172,32 +172,52 @@ app.get('/api/signals', (req, res) => {
 });
 
 // Start the signal generator and API server
+// async function startSignalGeneratorAndApi() {
+//     console.log('Starting signal generator and API server...');
+
+//     await dataService.connectDb(); // Initial database connection
+
+//     // Load models at startup. If no saved models, they will be null.
+//     await predictionService.loadModels();
+
+//     // Initial training for models if they were not loaded (e.g., first run)
+//     // Add a slight delay to ensure DB is fully ready and initial data might be fetched.
+//     setTimeout(async () => {
+//         if (!predictionService.hasModelsLoaded()) {
+//             console.log("Models not loaded at startup, performing initial training...");
+//             await predictionService.retrainModels(); // Initial training after a delay
+//         }
+//     }, config.initialModelTrainingDelayMs || 5000); // Default to 5 seconds if not in config
+
+//     // Schedule periodic model retraining
+//     setInterval(predictionService.retrainModels, config.modelRetrainIntervalMs);
+
+//     // Run first signal generation immediately
+//     await signalGenerationLoop();
+
+//     // Schedule subsequent signal generation runs
+//     setInterval(signalGenerationLoop, config.refreshIntervalMs);
+
+//     app.listen(PORT, () => {
+//         console.log(`API Server listening on port ${PORT}`);
+//         console.log(`Access signals at http://localhost:${PORT}/api/signals`);
+//         console.log(`Remember to also start your React frontend in a separate terminal`);
+//     }).on('error', (err) => {
+//         console.error('Failed to start API server:', err.message);
+//         if (err.code === 'EADDRINUSE') {
+//             console.error(`Port ${PORT} is already in use. Please close the other application or choose a different port.`);
+//         }
+//         process.exit(1);
+//     });
+// }
+
 async function startSignalGeneratorAndApi() {
     console.log('Starting signal generator and API server...');
 
-    await dataService.connectDb(); // Initial database connection
+    // 1. Initial database connection (keep this awaited)
+    await dataService.connectDb();
 
-    // Load models at startup. If no saved models, they will be null.
-    await predictionService.loadModels();
-
-    // Initial training for models if they were not loaded (e.g., first run)
-    // Add a slight delay to ensure DB is fully ready and initial data might be fetched.
-    setTimeout(async () => {
-        if (!predictionService.hasModelsLoaded()) {
-            console.log("Models not loaded at startup, performing initial training...");
-            await predictionService.retrainModels(); // Initial training after a delay
-        }
-    }, config.initialModelTrainingDelayMs || 5000); // Default to 5 seconds if not in config
-
-    // Schedule periodic model retraining
-    setInterval(predictionService.retrainModels, config.modelRetrainIntervalMs);
-
-    // Run first signal generation immediately
-    await signalGenerationLoop();
-
-    // Schedule subsequent signal generation runs
-    setInterval(signalGenerationLoop, config.refreshIntervalMs);
-
+    // 2. Start Express API server first, so it's immediately available
     app.listen(PORT, () => {
         console.log(`API Server listening on port ${PORT}`);
         console.log(`Access signals at http://localhost:${PORT}/api/signals`);
@@ -207,8 +227,31 @@ async function startSignalGeneratorAndApi() {
         if (err.code === 'EADDRINUSE') {
             console.error(`Port ${PORT} is already in use. Please close the other application or choose a different port.`);
         }
-        process.exit(1);
+        process.exit(1); // Exit if server cannot start
     });
+
+    // 3. Load prediction models (keep this awaited)
+    await predictionService.loadModels();
+
+    // 4. Initial training for models if they were not loaded (e.g., first run)
+    // Add a slight delay to ensure DB is fully ready and initial data might be fetched.
+    setTimeout(async () => {
+        if (!predictionService.hasModelsLoaded()) {
+            console.log("Models not loaded at startup, performing initial training...");
+            await predictionService.retrainModels(); // Initial training after a delay
+        }
+    }, config.initialModelTrainingDelayMs || 5000); // Default to 5 seconds if not in config
+
+    // 5. Schedule periodic model retraining
+    setInterval(predictionService.retrainModels, config.modelRetrainIntervalMs);
+
+    // 6. Initiate the first signal generation loop.
+    // Do NOT await this call. Let it run in the background.
+    console.log('Initiating first signal generation. Signals will be available soon...');
+    signalGenerationLoop();
+
+    // 7. Schedule subsequent signal generation runs
+    setInterval(signalGenerationLoop, config.refreshIntervalMs);
 }
 
 startSignalGeneratorAndApi();
