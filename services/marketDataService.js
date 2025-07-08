@@ -230,7 +230,8 @@ export async function getMarketData(tokenConfig) {
                                 pair = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
                             }
                             if (pair && pair.priceUsd) {
-                                currentPriceFinal = safeParseFloat(parseFloat(pair.priceUsd).toFixed(config.priceDecimals));
+                                currentPriceFinal = Number(pair.priceUsd);
+                                // currentPriceFinal = safeParseFloat(parseFloat(pair.priceUsd).toFixed(config.priceDecimals));
                                 console.log(`Successfully fetched current price for ${targetTokenSymbol} from Dexscreener (Subgraph fallback).`);
                             }
                         }
