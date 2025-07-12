@@ -222,10 +222,10 @@ export async function generateCombinedSignal(pairAddress, currentPrice, currentV
     const canBuy =
         rsiCondition &&
         macdCondition &&
-        !priceTrend.result && // Must NOT be rapidly rising (anti-pump)
-        volumeTrend.result &&
-        liquidityStatus.result &&
-        !pumpedStatus.result; // Must NOT have pumped recently (anti-FOMO)
+        // !priceTrend.result && // Must NOT be rapidly rising (anti-pump)
+        // volumeTrend.result &&
+        liquidityStatus.result
+        // !pumpedStatus.result; // Must NOT have pumped recently (anti-FOMO)
 
     if (canBuy) {
         signal = "Buy";
@@ -234,12 +234,10 @@ export async function generateCombinedSignal(pairAddress, currentPrice, currentV
     return {
         signal,
         pairName,
-        // currentPrice: parseFloat(currentPrice).toFixed(config.priceDecimals), // Format for display
         currentPrice: currentPrice, // Format for display
         currentVolume: parseFloat(currentVolume).toFixed(2),
         currentLiquidity: parseFloat(currentLiquidity).toFixed(2),
         rsi: rsi !== null ? rsi.toFixed(2) : 'N/A',
-        // macd: macd !== null ? macd.MACD.toFixed(4) : 'N/A',
         macd: macd?.MACD != null ? macd.MACD.toFixed(4) : 'N/A',
         macdSignal: macd?.MACD != null ? macd.signal.toFixed(4) : 'N/A',
         macdHistogram: macd?.MACD != null ? macd.histogram.toFixed(4) : 'N/A',
