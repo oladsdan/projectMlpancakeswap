@@ -16,6 +16,10 @@ let xgboostModel = null; // This will now hold an instance of @fractal-solutions
 const LSTM_MODEL_PATH = 'file://./models/lstm_model';
 const XGBOOST_MODEL_PATH = './models/xgboost_model.json';
 
+function formatTwoDigits(number) {
+    return number < 10 ? '0' + number : number;
+}
+
 
 // A function to create the Lstm Dataset
 function createLstmDataset(priceHistory, lookback = config.lstmLookbackPeriod) {
@@ -357,16 +361,37 @@ export async function generatePrediction(pairAddress) {
             details = 'No valid predictions could be generated from either model.';
         }
 
+         // --- Calculate Predicted Time and Expiry Time ---
+        const now = Date.now();
+        // Predicted time: Assuming prediction is for the next refresh interval
+        const predictedTimeMs = now + (config.refreshIntervalMs || 60000); // Default 1 minute if not in config
+        // Expiry time: Predicted time plus a validity duration
+        const expiryTimeMs = predictedTimeMs + (config.predictionValidityDurationMs || 300000); // Default 5 minutes if not in config
+
+        const predictedDate = new Date(predictedTimeMs);
+        const expiryDate = new Date(expiryTimeMs);
+
+        // Format predictedTime as YYYY.MM.DD HH:mm:ss
+        const predictedTime = `${predictedDate.getFullYear()}.${formatTwoDigits(predictedDate.getMonth() + 1)}.${formatTwoDigits(predictedDate.getDate())} ${formatTwoDigits(predictedDate.getHours())}:${formatTwoDigits(predictedDate.getMinutes())}:${formatTwoDigits(predictedDate.getSeconds())}`;
+
+        // Format expiryTime as YYYY.MM.DD HH:mm:ss
+        const expiryTime = `${expiryDate.getFullYear()}.${formatTwoDigits(expiryDate.getMonth() + 1)}.${formatTwoDigits(expiryDate.getDate())} ${formatTwoDigits(expiryDate.getHours())}:${formatTwoDigits(expiryDate.getMinutes())}:${formatTwoDigits(expiryDate.getSeconds())}`;
+
         return {
             combinedPrediction: combinedPrediction,
             lstmPrediction: lstmPrediction,
             xgboostPrediction: xgboostPrediction,
-            details: details
+            details: details,
+            predictedTime: predictedTime,
+            expiryTime: expiryTime
         };
 
     } catch (error) {
         console.error(`Error generating prediction for ${pairAddress}:`, error);
-        return { combinedPrediction: null, lstmPrediction: null, xgboostPrediction: null, details: `Error generating prediction: ${error.message}` };
+        return { combinedPrediction: null, lstmPrediction: null, xgboostPrediction: null, details: `Error generating prediction: ${error.message}`,
+        predictedTime: 'N/A',
+        expiryTime: 'N/A' };
+        
     }
 }
 

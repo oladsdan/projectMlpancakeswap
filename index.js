@@ -66,10 +66,14 @@ async function signalGenerationLoop() {
             volumeIncrease: 'N/A',
             liquidity: 'N/A',
             pumpedRecently: 'N/A',
+            signalUpdate: { time: 'N/A', price: 'N/A' },
+            timeTakenFor1_6_percent: 'N/A',
             signalDetails: [],
             lstmPrediction: 'N/A',
             xgboostPrediction: 'N/A',
-            combinedPrediction: 'N/A'
+            combinedPrediction: 'N/A',
+            predictedTime: 'N/A',
+            expiryTime: 'N/A'
         };
 
         try {
@@ -85,16 +89,7 @@ async function signalGenerationLoop() {
 
             const { pairAddress, chainId, baseToken, quoteToken, pairName, currentPrice, currentVolume, currentLiquidity } = marketData;
 
-            // await dataService.initializeTokenData({
-            //     pairAddress,
-            //     chainId : chainId ? chainId : "bsc",
-            //     baseTokenAddress: baseToken.address,
-            //     baseTokenSymbol: baseToken.symbol,
-            //     targetTokenAddress: tokenConfig.address,
-            //     targetTokenSymbol: tokenConfig.symbol,
-            //     targetTokenName: tokenConfig.name,
-            //     pairName
-            // });
+           
              await dataService.initializeTokenData({
                 pairAddress,
                 chainId: "bsc",
@@ -122,7 +117,12 @@ async function signalGenerationLoop() {
             // 3. Store current market data historically in MongoDB
             await dataService.updateMarketData(pairAddress, currentPrice, currentVolume, currentLiquidity);
 
-
+            if (currentPrice !== null && !isNaN(currentPrice)) {
+                signalResult.signalUpdate = {
+                    time: new Date().toISOString(), // Current timestamp
+                    price: parseFloat(signalResult.currentPrice) // Use the formatted price
+                };
+            }
 
             // Generate combined signal based on current and historical data from DB
             signalResult = await indicatorService.generateCombinedSignal(
@@ -143,6 +143,8 @@ async function signalGenerationLoop() {
             if (predictionResults.details && predictionResults.details !== 'Not enough historical data for prediction.') {
                 signalResult.signalDetails.push(`Prediction Status: ${predictionResults.details}`);
             }
+             signalResult.predictedTime = predictionResults.predictedTime;
+            signalResult.expiryTime = predictionResults.expiryTime;
 
             allSignals.push(signalResult);
             await dataService.updateSignalHistory(pairAddress, signalResult);

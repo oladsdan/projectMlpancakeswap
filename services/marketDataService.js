@@ -230,7 +230,7 @@ export async function getMarketData(tokenConfig) {
                                 pair = response.data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
                             }
                             if (pair && pair.priceUsd) {
-                                currentPriceFinal = Number(pair.priceUsd);
+                                currentPriceFinal = safeParseFloat(Number(pair.priceUsd));
                                 // currentPriceFinal = safeParseFloat(parseFloat(pair.priceUsd).toFixed(config.priceDecimals));
                                 console.log(`Successfully fetched current price for ${targetTokenSymbol} from Dexscreener (Subgraph fallback).`);
                             }
@@ -386,7 +386,7 @@ export async function getMarketData(tokenConfig) {
                 }
 
                 if (pair) {
-                    currentPriceFinal = pair.priceUsd ? safeParseFloat(parseFloat(pair.priceUsd).toFixed(2)) : null;
+                    currentPriceFinal = pair.priceUsd ? safeParseFloat(Number(parseFloat(pair.priceUsd)).toFixed(8)) : null;
                     currentVolumeFinal = pair.volume && pair.volume.h24 ? safeParseFloat(parseFloat(pair.volume.h24).toFixed(2)) : null;
                     currentLiquidityFinal = pair.liquidity && pair.liquidity.usd ? safeParseFloat(parseFloat(pair.liquidity.usd).toFixed(2)) : null;
                     historicalPrices = [];
