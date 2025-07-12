@@ -143,8 +143,17 @@ async function signalGenerationLoop() {
             if (predictionResults.details && predictionResults.details !== 'Not enough historical data for prediction.') {
                 signalResult.signalDetails.push(`Prediction Status: ${predictionResults.details}`);
             }
-             signalResult.predictedTime = predictionResults.predictedTime;
-            signalResult.expiryTime = predictionResults.expiryTime;
+
+            // signalResult.predictedTime = predictionResults.predictedTime;
+            // signalResult.expiryTime = predictionResults.expiryTime;
+            if (signalResult.lstmPrediction !== null && signalResult.lstmPrediction !== 'N/A' ||
+                    signalResult.combinedPrediction !== null && signalResult.combinedPrediction !== 'N/A') {
+                    signalResult.predictedTime = predictionResults.predictedTime;
+                    signalResult.expiryTime = predictionResults.expiryTime;
+            }else{
+                signalResult.predictedTime = 'N/A';
+                signalResult.expiryTime =  'N/A';
+            }
 
             allSignals.push(signalResult);
             await dataService.updateSignalHistory(pairAddress, signalResult);

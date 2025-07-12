@@ -521,12 +521,6 @@
       "decimals": 18
     },
     {
-      "symbol": "CAKE",
-      "name": "PancakeSwap",
-      "address": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
-      "decimals": 18
-    },
-    {
       "symbol": "ASR",
       "name": "ASR",
       "address": "0x80D5f92C2c8C682070C95495313dDB680B267320",
