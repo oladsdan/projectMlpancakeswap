@@ -27,6 +27,7 @@
   "subgraphLookbackDays": 7,
   "dexscreenerCallDelayMs": 500,
   "dexscreenerRateLimitPauseMinutes": 5,
+  "predictionValidityDurationMs": 300000,
 
 
   "monitoredTokens": [
